@@ -1,6 +1,7 @@
-import { PageTransition } from '@/components/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import { useTheme } from '@/hooks/useTheme';
+import { navigateTo } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
@@ -13,6 +14,7 @@ import {
 } from 'react-native';
 
 export default function ProfileScreen() {
+  useProtectedRoute();
   const { colors } = useTheme();
   const { user, logout } = useAuth();
 
@@ -27,7 +29,9 @@ export default function ProfileScreen() {
         },
         {
           text: 'Sair',
-          onPress: () => logout(),
+          onPress: async () => {
+            await logout();
+          },
           style: 'destructive',
         },
       ],
@@ -36,6 +40,7 @@ export default function ProfileScreen() {
   };
 
   const profileMenuItems = [
+    { icon: 'settings-outline', title: 'Configurações', route: '/settings' },
     { icon: 'person-outline', title: 'Editar Perfil', route: 'edit-profile' },
     { icon: 'lock-closed-outline', title: 'Segurança', route: 'security' },
     { icon: 'notifications-outline', title: 'Notificações', route: 'notifications' },
@@ -51,7 +56,7 @@ export default function ProfileScreen() {
     scrollContent: {
       paddingHorizontal: 20,
       paddingTop: 60,
-      paddingBottom: 120,
+      paddingBottom: 100,
     },
     profileHeader: {
       alignItems: 'center',
@@ -128,9 +133,8 @@ export default function ProfileScreen() {
   });
 
   return (
-    <PageTransition>
-      <View style={styles.container}>
-        <ScrollView 
+    <View style={styles.container}>
+      <ScrollView 
         contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
       >
@@ -149,7 +153,13 @@ export default function ProfileScreen() {
             <TouchableOpacity 
               key={index} 
               style={styles.menuItem} 
-              onPress={() => Alert.alert('Navegação', `Navegar para ${item.title}`)}
+              onPress={() => {
+                if (item.route === '/settings') {
+                  navigateTo('/settings');
+                } else {
+                  Alert.alert('Navegação', `Navegar para ${item.title}`);
+                }
+              }}
               activeOpacity={0.7}
             >
               <View style={styles.menuIconContainer}>
@@ -165,7 +175,6 @@ export default function ProfileScreen() {
           <Text style={styles.logoutButtonText}>Sair</Text>
         </TouchableOpacity>
       </ScrollView>
-      </View>
-    </PageTransition>
+    </View>
   );
 }

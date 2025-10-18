@@ -1,27 +1,40 @@
-import { PageTransition } from '@/components/PageTransition';
+import { BottomSheet } from '@/components/BottomSheet';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import { useTheme } from '@/hooks/useTheme';
+import { navigateAndReplace, navigateTo } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
+    Alert,
+    Image,
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
 
 export default function DashboardScreen() {
+  useProtectedRoute();
   const { colors } = useTheme();
   const { user } = useAuth();
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense');
+  const [title, setTitle] = useState('');
+  const [amount, setAmount] = useState('');
+  const [category, setCategory] = useState('');
 
-  const menuItems = [
-    { icon: 'analytics', title: 'Relatórios', description: 'Análises detalhadas' },
-    { icon: 'card', title: 'Cartões', description: 'Gerenciar cartões' },
-    { icon: 'business', title: 'Contas', description: 'Suas contas' },
-    { icon: 'settings', title: 'Configurações', description: 'Ajustes do app' },
-  ];
+  React.useEffect(() => {
+    import('@/utils/events').then(({ eventEmitter }) => {
+      const handleOpen = () => setShowAddModal(true);
+      eventEmitter.on('openAddTransaction', handleOpen);
+      return () => {
+        eventEmitter.off('openAddTransaction', handleOpen);
+      };
+    });
+  }, []);
 
   const recentTransactions = [
     { title: 'Salário', amount: '+R$ 5.000,00', date: 'Hoje', type: 'income' },
@@ -29,6 +42,23 @@ export default function DashboardScreen() {
     { title: 'Netflix', amount: '-R$ 45,90', date: '2 dias atrás', type: 'expense' },
     { title: 'Freelance', amount: '+R$ 800,00', date: '3 dias atrás', type: 'income' },
   ];
+
+  const categories = {
+    income: ['Salário', 'Freelance', 'Investimentos', 'Outros'],
+    expense: ['Alimentação', 'Transporte', 'Moradia', 'Lazer', 'Saúde', 'Educação'],
+  };
+
+  const handleSaveTransaction = () => {
+    if (!title || !amount || !category) {
+      Alert.alert('Erro', 'Preencha todos os campos');
+      return;
+    }
+    Alert.alert('Sucesso', 'Transação adicionada!');
+    setShowAddModal(false);
+    setTitle('');
+    setAmount('');
+    setCategory('');
+  };
 
   const styles = StyleSheet.create({
     container: {
@@ -41,17 +71,26 @@ export default function DashboardScreen() {
       alignItems: 'center',
       paddingHorizontal: 20,
       paddingTop: 60,
-      paddingBottom: 20,
+      paddingBottom: 16,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    logo: {
+      width: 32,
+      height: 32,
+      marginRight: 12,
     },
     userName: {
-      fontSize: 24,
+      fontSize: 22,
       fontWeight: 'bold',
       color: colors.text,
     },
     notificationButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       backgroundColor: colors.surface + '80',
       justifyContent: 'center',
       alignItems: 'center',
@@ -60,51 +99,51 @@ export default function DashboardScreen() {
     },
     scrollContent: {
       paddingHorizontal: 20,
-      paddingBottom: 120,
+      paddingBottom: 100,
     },
     balanceCard: {
-      backgroundColor: colors.primary + '20',
+      backgroundColor: colors.surface + '60',
       borderRadius: 20,
-      padding: 24,
-      marginBottom: 24,
+      padding: 20,
+      marginBottom: 20,
       borderWidth: 1,
-      borderColor: colors.primary + '40',
-      shadowColor: colors.primary,
+      borderColor: colors.border,
+      shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
+      shadowOpacity: 0.15,
       shadowRadius: 8,
-      elevation: 6,
+      elevation: 4,
     },
-    balanceLabel: {
-      fontSize: 16,
-      color: colors.primary,
-      fontWeight: '600',
-    },
-    balanceValue: {
-      fontSize: 40,
-      fontWeight: 'bold',
-      color: colors.text,
-      marginTop: 8,
-    },
-    balanceActions: {
-      flexDirection: 'row',
-      marginTop: 16,
-      gap: 12,
-    },
-    actionButton: {
-      flex: 1,
+    balanceHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.primary,
-      paddingVertical: 12,
-      borderRadius: 12,
-      gap: 8,
+      marginBottom: 8,
     },
-    actionButtonText: {
-      color: '#FFFFFF',
-      fontWeight: '600',
+    balanceIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.primary + '30',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 10,
+    },
+    balanceLabel: {
       fontSize: 14,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    balanceValue: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 2,
+      letterSpacing: -0.5,
+    },
+    balanceChange: {
+      fontSize: 12,
+      color: colors.success,
+      fontWeight: '600',
     },
     menuGrid: {
       flexDirection: 'row',
@@ -115,10 +154,8 @@ export default function DashboardScreen() {
     menuItem: {
       backgroundColor: colors.surface + '80',
       borderRadius: 16,
-      padding: 20,
+      padding: 16,
       width: '48%',
-      alignItems: 'center',
-      marginBottom: 12,
       borderWidth: 1,
       borderColor: colors.border,
       shadowColor: '#000',
@@ -126,39 +163,38 @@ export default function DashboardScreen() {
       shadowOpacity: 0.1,
       shadowRadius: 4,
       elevation: 2,
+      marginBottom: 10,
     },
     menuIconContainer: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: colors.primary + '15',
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 12,
+      marginBottom: 10,
     },
     menuTitle: {
-      fontSize: 16,
+      fontSize: 13,
       fontWeight: '600',
-      color: colors.text,
-      textAlign: 'center',
+      color: colors.textSecondary,
       marginBottom: 4,
     },
-    menuDescription: {
-      fontSize: 12,
-      color: colors.textSecondary,
-      textAlign: 'center',
-    },
-    sectionTitle: {
-      fontSize: 20,
+    menuValue: {
+      fontSize: 16,
       fontWeight: 'bold',
       color: colors.text,
-      marginBottom: 16,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 12,
     },
     transactionItem: {
       backgroundColor: colors.surface + '80',
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 12,
+      borderRadius: 14,
+      padding: 14,
+      marginBottom: 10,
       flexDirection: 'row',
       alignItems: 'center',
       borderWidth: 1,
@@ -170,29 +206,29 @@ export default function DashboardScreen() {
       elevation: 2,
     },
     transactionIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       backgroundColor: colors.border,
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: 16,
+      marginRight: 12,
     },
     transactionLeft: {
       flex: 1,
     },
     transactionTitle: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '600',
       color: colors.text,
-      marginBottom: 4,
+      marginBottom: 3,
     },
     transactionDate: {
-      fontSize: 14,
+      fontSize: 12,
       color: colors.textSecondary,
     },
     transactionAmount: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: 'bold',
     },
     amountIncome: {
@@ -201,13 +237,144 @@ export default function DashboardScreen() {
     amountExpense: {
       color: colors.error,
     },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: colors.background,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 24,
+      maxHeight: '85%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 24,
+    },
+    modalTitle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    closeButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    typeSelector: {
+      flexDirection: 'row',
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 4,
+      marginBottom: 20,
+    },
+    typeButton: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    typeButtonActive: {
+      backgroundColor: colors.primary,
+    },
+    typeButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    typeButtonTextActive: {
+      color: '#FFFFFF',
+    },
+    inputContainer: {
+      marginBottom: 16,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 14,
+      fontSize: 16,
+      color: colors.text,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    categoriesGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    categoryChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    categoryChipActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    categoryText: {
+      fontSize: 13,
+      color: colors.text,
+    },
+    categoryTextActive: {
+      color: '#FFFFFF',
+    },
+    modalSaveButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 12,
+      padding: 16,
+      alignItems: 'center',
+      marginTop: 20,
+    },
+    modalSaveButtonText: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: '#FFFFFF',
+    },
+    fab: {
+      position: 'absolute',
+      right: 20,
+      bottom: 100,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.4,
+      shadowRadius: 12,
+      elevation: 8,
+    },
   });
 
   return (
-    <PageTransition>
-      <View style={styles.container}>
-        <View style={styles.header}>
-        <Text style={styles.userName}>Olá, {user?.name || 'Usuário'}!</Text>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Image 
+            source={require('../assets/images/icon.png')} 
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.userName}>Olá, {user?.name || 'Usuário'}!</Text>
+        </View>
         <TouchableOpacity style={styles.notificationButton}>
           <Ionicons name="notifications-outline" size={24} color={colors.text} />
         </TouchableOpacity>
@@ -218,40 +385,64 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>Saldo Total</Text>
-          <Text style={styles.balanceValue}>R$ 12.504,10</Text>
-          <View style={styles.balanceActions}>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => router.push('/add-transaction')}
-            >
-              <Ionicons name="add-circle" size={20} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Nova</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => router.push('/accounts')}
-            >
-              <Ionicons name="wallet" size={20} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Contas</Text>
-            </TouchableOpacity>
+          <View style={styles.balanceHeader}>
+            <View style={styles.balanceIcon}>
+              <Ionicons name="wallet" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.balanceLabel}>Saldo Total</Text>
           </View>
+          <Text style={styles.balanceValue}>R$ 12.504,10</Text>
+          <Text style={styles.balanceChange}>↑ +15% este mês</Text>
         </View>
 
         <View style={styles.menuGrid}>
-          {menuItems.map((item, index) => (
-            <TouchableOpacity 
-              key={index}
-              style={styles.menuItem}
-              activeOpacity={0.7}
-            >
-              <View style={styles.menuIconContainer}>
-                <Ionicons name={item.icon as any} size={24} color={colors.primary} />
-              </View>
-              <Text style={styles.menuTitle}>{item.title}</Text>
-              <Text style={styles.menuDescription}>{item.description}</Text>
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => navigateAndReplace('/transactions')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIconContainer, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="trending-up" size={24} color={colors.primary} />
+            </View>
+            <Text style={styles.menuTitle}>Receitas</Text>
+            <Text style={styles.menuValue}>R$ 7.000</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => navigateAndReplace('/transactions')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIconContainer, { backgroundColor: '#EF444420' }]}>
+              <Ionicons name="trending-down" size={24} color="#EF4444" />
+            </View>
+            <Text style={styles.menuTitle}>Despesas</Text>
+            <Text style={styles.menuValue}>R$ 2.450</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => navigateAndReplace('/analytics')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIconContainer, { backgroundColor: colors.accent + '20' }]}>
+              <Ionicons name="pie-chart" size={24} color={colors.accent} />
+            </View>
+            <Text style={styles.menuTitle}>Analytics</Text>
+            <Text style={styles.menuValue}>Ver mais</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => navigateTo('/accounts')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIconContainer, { backgroundColor: '#F59E0B20' }]}>
+              <Ionicons name="wallet" size={24} color="#F59E0B" />
+            </View>
+            <Text style={styles.menuTitle}>Contas</Text>
+            <Text style={styles.menuValue}>3 contas</Text>
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionTitle}>Transações Recentes</Text>
@@ -280,7 +471,84 @@ export default function DashboardScreen() {
           </View>
         ))}
       </ScrollView>
-      </View>
-    </PageTransition>
+
+      <BottomSheet
+        visible={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Nova Transação"
+      >
+              <View style={styles.typeSelector}>
+                <TouchableOpacity
+                  style={[styles.typeButton, transactionType === 'expense' && styles.typeButtonActive]}
+                  onPress={() => {
+                    setTransactionType('expense');
+                    setCategory('');
+                  }}
+                >
+                  <Text style={[styles.typeButtonText, transactionType === 'expense' && styles.typeButtonTextActive]}>
+                    Despesa
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.typeButton, transactionType === 'income' && styles.typeButtonActive]}
+                  onPress={() => {
+                    setTransactionType('income');
+                    setCategory('');
+                  }}
+                >
+                  <Text style={[styles.typeButtonText, transactionType === 'income' && styles.typeButtonTextActive]}>
+                    Receita
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Título</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ex: Almoço"
+                  placeholderTextColor={colors.textSecondary}
+                  value={title}
+                  onChangeText={setTitle}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Valor (R$)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0,00"
+                  placeholderTextColor={colors.textSecondary}
+                  value={amount}
+                  onChangeText={setAmount}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Categoria</Text>
+                <View style={styles.categoriesGrid}>
+                  {categories[transactionType].map((cat) => (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[styles.categoryChip, category === cat && styles.categoryChipActive]}
+                      onPress={() => setCategory(cat)}
+                    >
+                      <Text style={[styles.categoryText, category === cat && styles.categoryTextActive]}>
+                        {cat}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+            <TouchableOpacity 
+              style={styles.modalSaveButton}
+              onPress={handleSaveTransaction}
+            >
+              <Text style={styles.modalSaveButtonText}>Salvar</Text>
+            </TouchableOpacity>
+      </BottomSheet>
+    </View>
   );
 }

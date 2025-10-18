@@ -1,21 +1,23 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { useBiometricAuth } from '@/contexts/BiometricAuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useValidation } from '@/hooks/useValidation';
+import { navigateAndReset } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Animated,
-  Dimensions,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Animated,
+    Dimensions,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 
@@ -25,12 +27,20 @@ export default function LoginScreen() {
   const { colors } = useTheme();
   const { login } = useAuth();
   const { validateForm } = useValidation();
+  const { 
+    isBiometricEnabled, 
+    isBiometricAvailable, 
+    authenticateWithBiometric 
+  } = useBiometricAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  
+  const emailInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -56,6 +66,70 @@ export default function LoginScreen() {
       }),
     ]).start();
   }, []);
+
+  const focusEmail = () => {
+    emailInputRef.current?.focus();
+  };
+
+  const focusPassword = () => {
+    passwordInputRef.current?.focus();
+  };
+
+  const handleBiometricLogin = async () => {
+    if (!isBiometricEnabled || !isBiometricAvailable) {
+      Toast.show({
+        type: 'error',
+        text1: 'Biometria Indisponível',
+        text2: 'A biometria não está habilitada ou disponível',
+        position: 'top',
+      });
+      return;
+    }
+
+    setIsLoggingIn(true);
+    
+    Toast.show({
+      type: 'info',
+      text1: 'Autenticação Biométrica',
+      text2: 'Use Face ID ou Touch ID para fazer login',
+      position: 'top',
+    });
+
+    try {
+      const success = await authenticateWithBiometric();
+      if (success) {
+        const loginSuccess = await login('admin@test.com', '123456');
+        if (loginSuccess) {
+          Toast.show({
+            type: 'success',
+            text1: 'Login Biométrico Realizado!',
+            text2: 'Bem-vindo ao Horizon',
+            position: 'top',
+          });
+          
+          setTimeout(() => {
+            navigateAndReset('/dashboard');
+          }, 1500);
+        }
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Falha na Autenticação',
+          text2: 'Biometria não reconhecida ou cancelada',
+          position: 'top',
+        });
+      }
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Erro na Biometria',
+        text2: 'Tente novamente ou use login tradicional',
+        position: 'top',
+      });
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
   const validateFields = () => {
     const emailValidation = validateForm(email, password);
@@ -101,7 +175,7 @@ export default function LoginScreen() {
         });
         
         setTimeout(() => {
-          router.replace('/dashboard');
+          navigateAndReset('/dashboard');
         }, 1500);
       } else {
         Toast.show({
@@ -141,14 +215,11 @@ export default function LoginScreen() {
     },
     logoContainer: {
       marginBottom: 24,
+      alignItems: 'center',
     },
-    title: {
-      fontSize: 36,
-      fontWeight: 'bold',
-      color: colors.text,
-      textAlign: 'center',
-      marginBottom: 8,
-      letterSpacing: 1,
+    logo: {
+      width: 200,
+      height: 200,
     },
     subtitle: {
       fontSize: 16,
@@ -192,8 +263,11 @@ export default function LoginScreen() {
     passwordToggle: {
       position: 'absolute',
       right: 16,
-      top: 18,
+      top: '50%',
+      marginTop: -18,
       padding: 8,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     errorText: {
       fontSize: 14,
@@ -280,6 +354,39 @@ export default function LoginScreen() {
       marginTop: 16,
       fontWeight: '600',
     },
+    divider: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginVertical: 20,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: colors.border,
+    },
+    dividerText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginHorizontal: 16,
+      fontWeight: '500',
+    },
+    biometricButton: {
+      backgroundColor: colors.surface + '80',
+      borderRadius: 16,
+      paddingVertical: 16,
+      paddingHorizontal: 20,
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    biometricButtonText: {
+      color: colors.primary,
+      fontSize: 16,
+      fontWeight: '600',
+      marginLeft: 8,
+    },
   });
 
   return (
@@ -310,9 +417,12 @@ export default function LoginScreen() {
               },
             ]}
           >
-            <Ionicons name="sunny" size={80} color={colors.primary} />
+            <Image 
+              source={require('../assets/images/horizon-logo.png')} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
           </Animated.View>
-          <Text style={styles.title}>Horizon</Text>
           <Text style={styles.subtitle}>
             Gerencie suas finanças com inteligência e simplicidade
           </Text>
@@ -320,8 +430,11 @@ export default function LoginScreen() {
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
+            <TouchableOpacity onPress={focusEmail} activeOpacity={0.7}>
+              <Text style={styles.label}>Email</Text>
+            </TouchableOpacity>
             <TextInput
+              ref={emailInputRef}
               style={[styles.input, emailError && styles.inputError]}
               placeholder="seu@email.com"
               placeholderTextColor={colors.textLight}
@@ -340,9 +453,12 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Senha</Text>
+            <TouchableOpacity onPress={focusPassword} activeOpacity={0.7}>
+              <Text style={styles.label}>Senha</Text>
+            </TouchableOpacity>
             <View style={styles.passwordContainer}>
               <TextInput
+                ref={passwordInputRef}
                 style={[styles.input, passwordError && styles.inputError]}
                 placeholder="••••••••"
                 placeholderTextColor={colors.textLight}
@@ -383,18 +499,28 @@ export default function LoginScreen() {
                 {isLoggingIn ? 'Entrando...' : 'Entrar'}
               </Text>
             </TouchableOpacity>
-          </View>
-        </View>
 
-        <View style={styles.demoCredentials}>
-          <View style={styles.demoTitleContainer}>
-            <Ionicons name="key" size={16} color={colors.primary} />
-            <Text style={styles.demoTitle}>Credenciais de Demonstração</Text>
+            {isBiometricEnabled && isBiometricAvailable && (
+              <>
+                <View style={styles.divider}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>ou</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+
+                <TouchableOpacity
+                  style={styles.biometricButton}
+                  onPress={handleBiometricLogin}
+                  disabled={isLoggingIn}
+                >
+                  <Ionicons name="finger-print" size={24} color={colors.primary} />
+                  <Text style={styles.biometricButtonText}>
+                    Entrar com Biometria
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
-          <Text style={styles.demoText}>
-            Email: admin@test.com{'\n'}
-            Senha: 123456
-          </Text>
         </View>
       </ScrollView>
 

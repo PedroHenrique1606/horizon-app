@@ -1,7 +1,7 @@
-import { PageTransition } from '@/components/PageTransition';
+import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import { useTheme } from '@/hooks/useTheme';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -15,14 +15,15 @@ import {
 } from 'react-native';
 
 export default function AccountsScreen() {
+  useProtectedRoute();
   const { colors } = useTheme();
   const [showModal, setShowModal] = useState(false);
   const [accountName, setAccountName] = useState('');
   const [initialBalance, setInitialBalance] = useState('');
 
   const accounts = [
-    { id: '1', name: 'Conta Corrente', balance: 5240.50, icon: 'card', color: '#10B981' },
-    { id: '2', name: 'Poupança', balance: 12000.00, icon: 'wallet', color: '#3B82F6' },
+    { id: '1', name: 'Conta Corrente', balance: 5240.50, icon: 'card', color: '#228B22' },
+    { id: '2', name: 'Poupança', balance: 12000.00, icon: 'wallet', color: '#CCFF66' },
     { id: '3', name: 'Investimentos', balance: 25300.75, icon: 'trending-up', color: '#F59E0B' },
   ];
 
@@ -205,11 +206,10 @@ export default function AccountsScreen() {
   const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
 
   return (
-    <PageTransition>
-      <View style={styles.container}>
+    <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <TouchableOpacity style={styles.backButton} onPress={goBack}>
               <Ionicons name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
             <Text style={styles.title}>Minhas Contas</Text>
@@ -285,7 +285,6 @@ export default function AccountsScreen() {
           </View>
         </Modal>
       </View>
-    </PageTransition>
   );
 }
 

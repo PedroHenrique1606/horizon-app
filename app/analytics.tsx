@@ -1,4 +1,4 @@
-import { PageTransition } from '@/components/PageTransition';
+import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import { useTheme } from '@/hooks/useTheme';
 import React, { useState } from 'react';
 import {
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 export default function AnalyticsScreen() {
+  useProtectedRoute();
   const { colors } = useTheme();
   const [selectedPeriod, setSelectedPeriod] = useState('month');
 
@@ -74,7 +75,7 @@ export default function AnalyticsScreen() {
     },
     scrollContent: {
       paddingHorizontal: 20,
-      paddingBottom: 120,
+      paddingBottom: 100,
     },
     periodSelector: {
       backgroundColor: colors.surface + '80',
@@ -188,9 +189,8 @@ export default function AnalyticsScreen() {
   });
 
   return (
-    <PageTransition>
-      <View style={styles.container}>
-        <View style={styles.headerContainer}>
+    <View style={styles.container}>
+      <View style={styles.headerContainer}>
         <Text style={styles.title}>Analytics</Text>
         <Text style={styles.subtitle}>Acompanhe seus gastos e receitas</Text>
       </View>
@@ -258,7 +258,6 @@ export default function AnalyticsScreen() {
           })}
         </View>
       </ScrollView>
-      </View>
-    </PageTransition>
+    </View>
   );
 }
